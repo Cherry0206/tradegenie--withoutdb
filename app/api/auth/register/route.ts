@@ -1,23 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage for demo purposes
-const users = [
-  {
-    id: 1,
-    firstName: "Demo",
-    lastName: "User",
-    email: "demo@tradegenie.com",
-    password: "password123",
-    role: "entrepreneur",
-    company: "Demo Company",
-    country: "United States",
-    createdAt: "2024-01-01T00:00:00.000Z",
-    isActive: true,
-  },
-]
+import { registerUser } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
-  // Set CORS headers
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
@@ -28,7 +12,6 @@ export async function POST(request: NextRequest) {
   try {
     console.log("=== Registration API Called ===")
 
-    // Parse request body
     const body = await request.json()
     console.log("Request body received:", { ...body, password: "[HIDDEN]" })
 
@@ -46,60 +29,82 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user exists
-    const existingUser = users.find((user) => user.email.toLowerCase() === email.toLowerCase())
-
-    if (existingUser) {
-      console.log("User already exists:", email)
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
       return NextResponse.json(
         {
           success: false,
-          message: "An account with this email already exists",
+          message: "Please provide a valid email address",
         },
-        { status: 409, headers },
+        { status: 400, headers },
       )
     }
 
-    // Create new user
-    const newUser = {
-      id: users.length + 1,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.toLowerCase().trim(),
-      password: password, // In production, hash this
-      role,
-      company: company?.trim() || "",
-      country: country.trim(),
-      createdAt: new Date().toISOString(),
-      isActive: true,
+    // Password validation
+    if (password.length < 6) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Password must be at least 6 characters long",
+        },
+        { status: 400, headers },
+      )
     }
 
-    // Add to users array
-    users.push(newUser)
-    console.log("User created successfully:", newUser.email)
+    try {
+      const { user, token } = await registerUser({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+        role,
+        company: company?.trim() || "",
+        country: country.trim(),
+      })
 
-    // Generate simple token
-    const token = `token_${newUser.id}_${Date.now()}`
+      console.log("User created successfully:", user.email)
 
-    // Return success response
-    const { password: _, ...userWithoutPassword } = newUser
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Account created successfully",
+          token,
+          user: {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            role: user.role,
+            company: user.company,
+            country: user.country,
+            createdAt: user.created_at,
+          },
+        },
+        { status: 201, headers },
+      )
+    } catch (authError) {
+      console.error("Registration auth error:", authError)
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Account created successfully",
-        token,
-        user: userWithoutPassword,
-      },
-      { status: 201, headers },
-    )
+      if (authError instanceof Error && authError.message.includes("already exists")) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "An account with this email already exists",
+          },
+          { status: 409, headers },
+        )
+      }
+
+      throw authError
+    }
   } catch (error) {
     console.error("Registration error:", error)
 
     return NextResponse.json(
       {
         success: false,
-        message: "Registration failed",
+        message: "Registration failed. Please try again.",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500, headers },

@@ -1,20 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Simple in-memory storage for demo purposes
-const users = [
-  {
-    id: 1,
-    firstName: "Demo",
-    lastName: "User",
-    email: "demo@tradegenie.com",
-    password: "password123",
-    role: "entrepreneur",
-    company: "Demo Company",
-    country: "United States",
-    createdAt: "2024-01-01T00:00:00.000Z",
-    isActive: true,
-  },
-]
+import { loginUser } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   const headers = {
@@ -42,10 +27,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user
-    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim())
+    try {
+      const { user, token } = await loginUser(email.toLowerCase().trim(), password)
 
-    if (!user || user.password !== password) {
+      console.log("Login successful for:", user.email)
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Login successful",
+          token,
+          user: {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            role: user.role,
+            company: user.company,
+            country: user.country,
+            createdAt: user.created_at,
+          },
+        },
+        { headers },
+      )
+    } catch (authError) {
+      console.error("Login auth error:", authError)
+
       return NextResponse.json(
         {
           success: false,
@@ -54,31 +61,13 @@ export async function POST(request: NextRequest) {
         { status: 401, headers },
       )
     }
-
-    // Generate simple token
-    const token = `token_${user.id}_${Date.now()}`
-
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user
-
-    console.log("Login successful for:", user.email)
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Login successful",
-        token,
-        user: userWithoutPassword,
-      },
-      { headers },
-    )
   } catch (error) {
     console.error("Login error:", error)
 
     return NextResponse.json(
       {
         success: false,
-        message: "Login failed",
+        message: "Login failed. Please try again.",
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500, headers },

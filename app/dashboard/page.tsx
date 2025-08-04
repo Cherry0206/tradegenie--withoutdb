@@ -43,26 +43,49 @@ export default function DashboardPage() {
   const [showProfileSettings, setShowProfileSettings] = useState(false)
   const [showAccountSettings, setShowAccountSettings] = useState(false)
   const [editFormData, setEditFormData] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    company: user?.company || "",
-    country: user?.country || "",
+    firstName: "",
+    lastName: "",
+    company: "",
+    country: "",
   })
 
   useEffect(() => {
     // Get user from localStorage
     const userData = localStorage.getItem("user")
     if (userData) {
-      setUser(JSON.parse(userData))
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      setEditFormData({
+        firstName: parsedUser.firstName || "",
+        lastName: parsedUser.lastName || "",
+        company: parsedUser.company || "",
+        country: parsedUser.country || "",
+      })
     } else {
       router.push("/auth/signin")
     }
   }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    router.push("/")
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (token) {
+        // Call logout API
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        })
+      }
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      router.push("/")
+    }
   }
 
   const handleEditProfile = () => {
@@ -75,15 +98,39 @@ export default function DashboardPage() {
     setShowEditProfile(true)
   }
 
-  const handleSaveProfile = () => {
-    // Update user data in localStorage
-    const updatedUser = {
-      ...user,
-      ...editFormData,
+  const handleSaveProfile = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        router.push("/auth/signin")
+        return
+      }
+
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editFormData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Update user data in localStorage and state
+        const updatedUser = data.user
+        setUser(updatedUser)
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setShowEditProfile(false)
+      } else {
+        console.error("Failed to update profile:", data.message)
+        alert("Failed to update profile. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      alert("Network error. Please try again.")
     }
-    setUser(updatedUser)
-    localStorage.setItem("user", JSON.stringify(updatedUser))
-    setShowEditProfile(false)
   }
 
   const handleProfileSettings = () => {
@@ -446,6 +493,7 @@ export default function DashboardPage() {
             </Card>
           </motion.div>
         </div>
+
         {/* Edit Profile Modal */}
         {showEditProfile && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
