@@ -121,29 +121,41 @@ export default function LandingPage() {
               <Button variant="ghost" className="bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-full px-6">
                 Home
               </Button>
-              <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
-                Features <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
-              <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
-                Pricing
-              </Button>
-              <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
-                Success Stories
-              </Button>
-              <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
-                Resources <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
+              <Link href="/features">
+                <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
+                  Features <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+              <Link href="/pricing">
+                <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
+                  Pricing
+                </Button>
+              </Link>
+              <Link href="/success-stories">
+                <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
+                  Success Stories
+                </Button>
+              </Link>
+              <Link href="/resources">
+                <Button variant="ghost" className="text-gray-600 hover:text-purple-700 rounded-full px-6">
+                  Resources <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
             </nav>
 
             {/* CTA Buttons */}
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" className="text-purple-600 hover:text-purple-700 flex items-center">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Ask Genie
-              </Button>
-              <Button variant="ghost" className="text-gray-600 hover:text-gray-700 flex items-center">
-                Demo <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
+              <Link href="/chat">
+                <Button variant="ghost" className="text-purple-600 hover:text-purple-700 flex items-center">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Ask Genie
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button variant="ghost" className="text-gray-600 hover:text-gray-700 flex items-center">
+                  Demo <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
