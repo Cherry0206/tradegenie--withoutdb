@@ -8,17 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import {
-  Shield,
-  AlertTriangle,
-  TrendingUp,
-  ArrowLeft,
-  Download,
-  Globe,
-  DollarSign,
-  Scale,
-  FileText,
-} from "lucide-react"
+import { Shield, AlertTriangle, TrendingUp, ArrowLeft, Download, Globe, DollarSign, Scale, FileText, Zap, Clock, AlertCircle } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -35,6 +25,8 @@ interface RiskAnalysis {
   recommendations: string[]
   warnings: string[]
   opportunities: string[]
+  lastUpdated?: string
+  dataSource?: string
 }
 
 export default function RiskAnalysisPage() {
@@ -48,6 +40,9 @@ export default function RiskAnalysisPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<RiskAnalysis | null>(null)
   const [recentAnalyses, setRecentAnalyses] = useState<RiskAnalysis[]>([])
+  const [useRealTimeData, setUseRealTimeData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -63,14 +58,99 @@ export default function RiskAnalysisPage() {
     if (!analysisForm.country || !analysisForm.product) return
 
     setIsAnalyzing(true)
+    setError(null)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      // Use real-time SAP HANA data
+      const endpoint = useRealTimeData ? '/api/risk-analysis/real-time' : '/api/risk-analysis'
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          country: analysisForm.country,
+          product: analysisForm.product,
+          exportValue: analysisForm.exportValue,
+          timeline: analysisForm.timeline,
+        }),
+      })
+
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text()
+        throw new Error(`Expected JSON response, got: ${text.substring(0, 100)}...`)
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        setAnalysis(result.data)
+        setRecentAnalyses((prev) => [result.data, ...prev.slice(0, 4)])
+      } else {
+        throw new Error(result.message || 'Risk analysis failed')
+      }
+    } catch (error) {
+      console.error('Risk analysis error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      setError(errorMessage)
+      
+      // Fallback to mock data
+      await generateMockAnalysis()
+    }
+
+    setIsAnalyzing(false)
+  }
+
+  const downloadReport = async (analysisData: RiskAnalysis) => {
+    setIsDownloading(true)
+    try {
+      const response = await fetch('/api/reports/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          analysis: analysisData,
+          type: 'risk-analysis'
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        // Create download link
+        const link = document.createElement('a')
+        link.href = result.data.pdf
+        link.download = result.data.filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        throw new Error(result.message || 'Failed to generate report')
+      }
+    } catch (error) {
+      console.error('Download error:', error)
+      setError('Failed to download report. Please try again.')
+    }
+    setIsDownloading(false)
+  }
+
+  const generateMockAnalysis = async () => {
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     const mockAnalysis: RiskAnalysis = {
       country: analysisForm.country,
       product: analysisForm.product,
-      overallRisk: Math.floor(Math.random() * 40) + 30, // 30-70%
+      overallRisk: Math.floor(Math.random() * 40) + 30,
       politicalRisk: Math.floor(Math.random() * 50) + 25,
       economicRisk: Math.floor(Math.random() * 45) + 20,
       complianceRisk: Math.floor(Math.random() * 60) + 15,
@@ -93,11 +173,12 @@ export default function RiskAnalysisPage() {
         "Government incentives for foreign investment",
         "Emerging middle class with increased purchasing power",
       ],
+      lastUpdated: new Date().toISOString(),
+      dataSource: "Enhanced Mock Data"
     }
 
     setAnalysis(mockAnalysis)
     setRecentAnalyses((prev) => [mockAnalysis, ...prev.slice(0, 4)])
-    setIsAnalyzing(false)
   }
 
   const getRiskColor = (risk: number) => {
@@ -146,12 +227,50 @@ export default function RiskAnalysisPage() {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-gold-600 bg-clip-text text-transparent">
                 Risk Intelligence
               </h1>
+              {useRealTimeData && (
+                <Badge variant="outline" className="text-green-600 border-green-600">
+                  <Zap className="w-3 h-3 mr-1" />
+                  Real-time
+                </Badge>
+              )}
             </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Link href="/hana-status">
+              <Button variant="outline" size="sm">
+                HANA Status
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUseRealTimeData(!useRealTimeData)}
+              className={useRealTimeData ? "bg-green-50 border-green-200" : "bg-gray-50"}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              {useRealTimeData ? "Real-time ON" : "Real-time OFF"}
+            </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Error Message */}
+        {error && (
+          <Card className="border-red-200 bg-red-50 mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                <div>
+                  <p className="text-red-800 font-semibold">Analysis Error</p>
+                  <p className="text-red-700 text-sm">{error}</p>
+                  <p className="text-red-600 text-xs mt-1">Using fallback data for demonstration</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Risk Analysis Form */}
           <div className="lg:col-span-1">
@@ -161,7 +280,9 @@ export default function RiskAnalysisPage() {
                   <Globe className="w-5 h-5 mr-2 text-purple-600" />
                   Analyze Market Risk
                 </CardTitle>
-                <CardDescription>Get comprehensive risk assessment for any country-product combination</CardDescription>
+                <CardDescription>
+                  Get comprehensive risk assessment powered by {useRealTimeData ? "SAP HANA Cloud real-time data" : "historical data"}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -234,7 +355,7 @@ export default function RiskAnalysisPage() {
                   ) : (
                     <>
                       <Shield className="w-4 h-4 mr-2" />
-                      Analyze Risk
+                      {useRealTimeData ? "Real-time Analysis" : "Analyze Risk"}
                     </>
                   )}
                 </Button>
@@ -254,11 +375,34 @@ export default function RiskAnalysisPage() {
                         <Shield className="w-5 h-5 mr-2 text-purple-600" />
                         Risk Assessment: {analysis.country} - {analysis.product}
                       </CardTitle>
-                      <Button variant="outline" size="sm" className="bg-transparent">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Report
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        {analysis.dataSource && (
+                          <Badge variant="outline" className={analysis.dataSource.includes("Real-time") ? "text-green-600" : "text-orange-600"}>
+                            {analysis.dataSource.includes("Real-time") ? (
+                              <Zap className="w-3 h-3 mr-1" />
+                            ) : (
+                              <Clock className="w-3 h-3 mr-1" />
+                            )}
+                            {analysis.dataSource}
+                          </Badge>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-transparent"
+                          onClick={() => downloadReport(analysis)}
+                          disabled={isDownloading}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          {isDownloading ? "Generating..." : "Export Report"}
+                        </Button>
+                      </div>
                     </div>
+                    {analysis.lastUpdated && (
+                      <CardDescription>
+                        Last updated: {new Date(analysis.lastUpdated).toLocaleString()}
+                      </CardDescription>
+                    )}
                   </CardHeader>
                   <CardContent>
                     <div className="text-center mb-6">
@@ -331,7 +475,7 @@ export default function RiskAnalysisPage() {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-medium">Market Risk</span>
-                        <span className={`font-semibold ${getRiskColor(analysis.marketRisk)}`}>
+                        <span className={`font-semibbold ${getRiskColor(analysis.marketRisk)}`}>
                           {analysis.marketRisk}%
                         </span>
                       </div>
@@ -409,6 +553,12 @@ export default function RiskAnalysisPage() {
                   <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">Risk Analysis</h3>
                   <p className="text-gray-500">Fill in the form to get comprehensive risk assessment</p>
+                  {useRealTimeData && (
+                    <Badge variant="outline" className="mt-2 text-green-600 border-green-600">
+                      <Zap className="w-3 h-3 mr-1" />
+                      Real-time data ready
+                    </Badge>
+                  )}
                 </div>
               </Card>
             )}
@@ -446,13 +596,24 @@ export default function RiskAnalysisPage() {
                           <p className="text-sm text-gray-500">
                             Overall Risk: {analysis.overallRisk}% ({getRiskLabel(analysis.overallRisk)})
                           </p>
+                          {analysis.dataSource && (
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {analysis.dataSource}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant="outline" className={getRiskColor(analysis.overallRisk)}>
                           {getRiskLabel(analysis.overallRisk)}
                         </Badge>
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-transparent"
+                          onClick={() => downloadReport(analysis)}
+                          disabled={isDownloading}
+                        >
                           <Download className="w-4 h-4 mr-2" />
                           Download
                         </Button>

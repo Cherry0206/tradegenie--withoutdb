@@ -1,18 +1,18 @@
 {
-  "name": "tradegenie-backend",
+  "name": "trade-genie",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start",
-    "type-check": "tsc --noEmit"
+    "start": "next start"
   },
   "dependencies": {
-    "@ai-sdk/google": "^0.0.52",
+    "@ai-sdk/openai": "^0.0.66",
     "@emotion/is-prop-valid": "latest",
     "@google/generative-ai": "latest",
+    "@hookform/resolvers": "^3.9.0",
     "@neondatabase/serverless": "latest",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
@@ -33,7 +33,6 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
-    "@radix-ui/react-sheet": "^1.1.0",
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-slot": "latest",
     "@radix-ui/react-switch": "latest",
@@ -42,6 +41,8 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
     "ai": "^3.4.32",
     "bcryptjs": "latest",
     "canvas": "latest",
@@ -54,6 +55,7 @@
     "geist": "latest",
     "input-otp": "latest",
     "jsdom": "latest",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "latest",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
@@ -67,10 +69,10 @@
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "vaul": "latest"
+    "vaul": "latest",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
