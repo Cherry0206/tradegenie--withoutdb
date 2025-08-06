@@ -237,7 +237,7 @@ async function generateGeminiResponse(message: string, history: any[], language 
         `Processing tariff query: ${tariffQuery.product} from ${tariffQuery.fromCountry} to ${tariffQuery.toCountry}`,
       )
 
-      // Handle tariff query using comprehensive database
+      // Handle tariff query using comprehensive database - ONLY return data if we actually have it
       const tariffData = await getTariffDataDirect(tariffQuery.product, tariffQuery.fromCountry, tariffQuery.toCountry)
 
       if (tariffData) {
@@ -285,6 +285,18 @@ ${
 Need help with documentation, finding partners, or market analysis? Just ask! 🚀`
 
         return response
+      } else {
+        // If we don't have the specific tariff data, inform the user honestly
+        const langResponses = LANGUAGE_RESPONSES[language as keyof typeof LANGUAGE_RESPONSES] || LANGUAGE_RESPONSES.en
+        return `${langResponses.tariffNotFound}
+
+I can help you with tariff information for products I have in my database. Please try asking about:
+• Tea (Black Tea, Green Tea)
+• Textiles and fabrics
+• Electronics
+• Agricultural products
+
+Or ask me about other trade services like documentation, market analysis, or finding business partners! 🚀`
       }
     }
 
@@ -303,7 +315,7 @@ Need help with documentation, finding partners, or market analysis? Just ask! �
 ${languageInstruction}
 
 Key capabilities:
-- Tariff and duty information for 200+ products across 150+ countries
+- Tariff and duty information for specific products in my database (don't make up tariff data)
 - Export documentation and compliance requirements  
 - Market analysis and business opportunities
 - Trade regulations and restrictions
@@ -318,11 +330,13 @@ Current question: ${message}
 Instructions:
 1. Provide helpful, accurate trade-related advice in ${getLanguageName(language)}
 2. Be conversational and professional
-3. For specific tariff queries, encourage users to ask: "What's the tariff for [product] from [country] to [country]?"
-4. Offer actionable next steps
-5. Keep responses focused and relevant to the user's question
-6. Use emojis and formatting to make responses engaging
-7. Always end with a helpful follow-up question or suggestion
+3. For tariff queries, only provide data if you actually have it - don't make up tariff rates
+4. If you don't have specific tariff data, suggest alternatives or other services
+5. Offer actionable next steps
+6. Keep responses focused and relevant to the user's question
+7. Use markdown formatting (**text**) for bold text, not HTML tags
+8. Use emojis and formatting to make responses engaging
+9. Always end with a helpful follow-up question or suggestion
 
 Respond as TradeGenie in ${getLanguageName(language)}:`
 
